@@ -26,6 +26,21 @@ BarWidget {
     ? bar.shell.serviceFor(root.moduleName) : null
   readonly property var hostedWidgetRegistry: trayService ? trayService.barWidgetRegistry : null
 
+  // Omarchy 4.5's bar lays a drag-to-reorder MouseArea over every widget it
+  // hosts, above anything the widget draws — our dragOutOverlay included,
+  // since the slot nests the widget two items deep. The bar steps aside only
+  // for a press inside the widget's `sectionHost`, the contract its own tray
+  // uses for its drawer. So the drawer's open area is offered as one, and a
+  // press there reaches dragOutMouse; the chevron stays the bar's to drag.
+  //
+  // The same contract makes the bar draw its own `tray` layout section into
+  // the host and aim drops at it. `sectionShown` null tells it none of that
+  // section shows, so drops into the drawer stay ours (dragOver/finishDragIn)
+  // rather than landing in bar.layout.tray as well.
+  property Item sectionHost: null
+  readonly property var sectionShown: null
+  readonly property string sectionEdge: "end"
+
   // Hover-to-expand, driven by the drag-out overlay's single HoverHandler:
   // two stacked hover items (the overlay plus a handler in the drawer) fight
   // over hover and oscillate the reveal, so the overlay is the one authority.
@@ -1037,6 +1052,15 @@ BarWidget {
           height: root.barSize
           clip: true
 
+          // The bar's press hand-off area (see sectionHost): the drawer's
+          // visible extent, empty of content, and gone while it is shut.
+          Item {
+            id: sectionArea
+            anchors.fill: parent
+            Component.onCompleted: root.sectionHost = sectionArea
+            Component.onDestruction: if (root && root.sectionHost === sectionArea) root.sectionHost = null
+          }
+
           Row {
             id: drawerRow
             // Right-anchored inside the clip: the drawer's inner edge stays
@@ -1107,6 +1131,15 @@ BarWidget {
           width: root.barSize
           height: verticalTrayRoot.revealExtent
           clip: true
+
+          // The bar's press hand-off area (see sectionHost): the drawer's
+          // visible extent, empty of content, and gone while it is shut.
+          Item {
+            id: sectionArea
+            anchors.fill: parent
+            Component.onCompleted: root.sectionHost = sectionArea
+            Component.onDestruction: if (root && root.sectionHost === sectionArea) root.sectionHost = null
+          }
 
           Column {
             id: drawerColumn
